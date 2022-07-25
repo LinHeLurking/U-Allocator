@@ -4,13 +4,17 @@ cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_CXX_STANDARD 11)
 
+find_package(Threads REQUIRED)
+
 add_library(Allocator STATIC allocator.h allocator.cpp)
 
 add_executable(test_allocator_seperate tests/seperate_allocator.cpp)
 target_link_libraries(test_allocator_seperate PRIVATE Allocator)
+target_link_libraries(test_allocator_seperate PRIVATE Threads::Threads)
 
 add_executable(test_allocator_interchange tests/interchange_allocator.cpp)
 target_link_libraries(test_allocator_interchange PRIVATE Allocator)
+target_link_libraries(test_allocator_interchange PRIVATE Threads::Threads)
 
 enable_testing()
 
