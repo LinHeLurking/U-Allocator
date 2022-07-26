@@ -3,7 +3,8 @@
 #include <thread>
 #include <vector>
 
-#include "../allocator.h"
+#include "../src/allocator.h"
+#include "mem_wr.h"
 
 int thrd_task_interchange(int tid, int repeat, std::vector<std::mutex> &mutexes,
                           std::vector<std::vector<void *>> &allocated) {
@@ -28,8 +29,8 @@ int thrd_task_interchange(int tid, int repeat, std::vector<std::mutex> &mutexes,
       int len = dis(gen);
       mutexes[tid].lock();
       char *cur = (char *)allocator.alloc(len);
-      for (int i = 0; i < len; ++i) {
-        cur[i] = 'a';
+      if (mem_wr(cur, len) != 0) {
+        return -1;
       }
       allocated[tid].push_back(cur);
       mutexes[tid].unlock();
@@ -44,9 +45,9 @@ int test_allocator_interchange() {
   std::vector<std::mutex> mutexes(4);
   std::vector<std::vector<void *>> allocated(4);
 #ifndef NDEBUG
-  constexpr int repeat = int(3e7);
+  constexpr int repeat = int(4e7);
 #else
-  constexpr int repeat = int(2e8);
+  constexpr int repeat = int(4e8);
 #endif
   for (int i = 0; i < thrds.size(); ++i) {
     thrds[i] = std::async(thrd_task_interchange, i, repeat, std::ref(mutexes),

@@ -3,7 +3,8 @@
 #include <thread>
 #include <vector>
 
-#include "../allocator.h"
+#include "../src/allocator.h"
+#include "mem_wr.h"
 
 int thrd_task_separate(int repeat) {
   auto allocator = UAllocator::Allocator();
@@ -22,8 +23,8 @@ int thrd_task_separate(int repeat) {
     } else if (coin == 2) {
       int len = dis(gen);
       char *cur = (char *)allocator.alloc(len);
-      for (int i = 0; i < len; ++i) {
-        cur[i] = 'a';
+      if (mem_wr(cur, len) != 0) {
+        return -1;
       }
       allocated.push_back(cur);
     }
@@ -37,9 +38,9 @@ int thrd_task_separate(int repeat) {
 int test_allocator_seperate() {
   std::vector<std::future<int>> thrds(4);
 #ifndef NDEBUG
-  constexpr int repeat = int(3e7);
+  constexpr int repeat = int(4e7);
 #else
-  constexpr int repeat = int(2e8);
+  constexpr int repeat = int(4e8);
 #endif
   for (auto &thrd : thrds) {
     thrd = std::async(thrd_task_separate, repeat);

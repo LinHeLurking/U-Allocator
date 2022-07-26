@@ -6,7 +6,13 @@ set(CMAKE_CXX_STANDARD 11)
 
 find_package(Threads REQUIRED)
 
-add_library(Allocator STATIC allocator.h allocator.cpp)
+add_library(
+    Allocator 
+    STATIC 
+    src/allocator.h
+    src/hierarchy/front_end/allocator_front_end.h src/hierarchy/front_end/allocator_front_end.cpp 
+    src/hierarchy/back_end/allocator_back_end.h src/hierarchy/back_end/allocator_back_end.cpp
+)
 
 add_executable(test_allocator_seperate tests/seperate_allocator.cpp)
 target_link_libraries(test_allocator_seperate PRIVATE Allocator)
