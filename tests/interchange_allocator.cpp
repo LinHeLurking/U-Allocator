@@ -45,9 +45,9 @@ int test_allocator_interchange() {
   std::vector<std::mutex> mutexes(4);
   std::vector<std::vector<void *>> allocated(4);
 #ifndef NDEBUG
-  constexpr int repeat = int(4e7);
+  constexpr int repeat = int(1e8);
 #else
-  constexpr int repeat = int(4e8);
+  constexpr int repeat = int(1e8);
 #endif
   for (int i = 0; i < thrds.size(); ++i) {
     thrds[i] = std::async(thrd_task_interchange, i, repeat, std::ref(mutexes),

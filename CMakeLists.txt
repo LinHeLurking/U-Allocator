@@ -9,18 +9,20 @@ find_package(Threads REQUIRED)
 add_library(
     Allocator 
     STATIC 
-    src/allocator.h
-    src/hierarchy/front_end/allocator_front_end.h src/hierarchy/front_end/allocator_front_end.cpp 
-    src/hierarchy/back_end/allocator_back_end.h src/hierarchy/back_end/allocator_back_end.cpp
+    src/allocator.cpp
 )
 
 add_executable(test_allocator_seperate tests/seperate_allocator.cpp)
-target_link_libraries(test_allocator_seperate PRIVATE Allocator)
-target_link_libraries(test_allocator_seperate PRIVATE Threads::Threads)
+target_link_libraries(test_allocator_seperate PUBLIC Allocator)
+target_link_libraries(test_allocator_seperate PUBLIC Threads::Threads)
 
 add_executable(test_allocator_interchange tests/interchange_allocator.cpp)
-target_link_libraries(test_allocator_interchange PRIVATE Allocator)
-target_link_libraries(test_allocator_interchange PRIVATE Threads::Threads)
+target_link_libraries(test_allocator_interchange PUBLIC Allocator)
+target_link_libraries(test_allocator_interchange PUBLIC Threads::Threads)
+
+add_executable(perf_allocator tests/perf_allocator.cpp)
+target_link_libraries(perf_allocator PUBLIC Allocator)
+target_link_libraries(perf_allocator PUBLIC Threads::Threads)
 
 enable_testing()
 
