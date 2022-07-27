@@ -14,7 +14,17 @@ class AllocatorBase {
   virtual void *alloc(size_t size) { return malloc(size); }
   virtual void dealloc(void *ptr) { free(ptr); }
 };
-class FrontEnd : public AllocatorBase {};
+class FrontEnd : public AllocatorBase {
+ public:
+  FrontEnd();
+
+  void *alloc(size_t size) override;
+  void dealloc(void *ptr) override;
+
+ protected:
+  AllocatorBase *back_end = nullptr;
+  void refill(int slot_id);
+};
 }  // namespace Detail
 
 using Allocator = Detail::FrontEnd;
