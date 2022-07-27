@@ -6,12 +6,15 @@
 
 namespace UAllocator {
 namespace Detail {
-// class BackEnd;
-class FrontEnd {
+
+class AllocatorBase {
  public:
-  static void *alloc(size_t size) { return malloc(size); }
-  static void dealloc(void *ptr) { free(ptr); }
+  AllocatorBase() = default;
+  virtual ~AllocatorBase() = default;
+  virtual void *alloc(size_t size) { return malloc(size); }
+  virtual void dealloc(void *ptr) { free(ptr); }
 };
+class FrontEnd : public AllocatorBase {};
 }  // namespace Detail
 
 using Allocator = Detail::FrontEnd;
