@@ -11,15 +11,15 @@ class AllocatorBase {
  public:
   AllocatorBase() = default;
   virtual ~AllocatorBase() = default;
-  virtual void *alloc(size_t size) { return malloc(size); }
-  virtual void dealloc(void *ptr) { free(ptr); }
+  virtual void *allocate(size_t size) { return malloc(size); }
+  virtual void deallocate(void *ptr) { free(ptr); }
 };
 class FrontEnd : public AllocatorBase {
  public:
   FrontEnd();
 
-  void *alloc(size_t size) override;
-  void dealloc(void *ptr) override;
+  void *allocate(size_t size) override;
+  void deallocate(void *ptr) override;
 
  protected:
   AllocatorBase *back_end = nullptr;

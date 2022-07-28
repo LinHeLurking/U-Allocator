@@ -24,7 +24,11 @@ add_executable(perf_allocator tests/perf_allocator.cpp)
 target_link_libraries(perf_allocator PUBLIC Allocator)
 target_link_libraries(perf_allocator PUBLIC Threads::Threads)
 
+add_executable(test_radix_tree tests/radix_tree.cpp)
+add_executable(perf_radix_tree tests/perf_radix_tree.cpp)
+
 enable_testing()
 
 add_test(NAME test_allocator_seperate COMMAND $<TARGET_FILE:test_allocator_seperate>)
 add_test(NAME test_allocator_interchange COMMAND $<TARGET_FILE:test_allocator_interchange>)
+add_test(NAME test_radix_tree COMMAND $<TARGET_FILE:test_radix_tree>)

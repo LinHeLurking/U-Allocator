@@ -11,27 +11,27 @@
 #include "../src/allocator.h"
 
 struct NaiveAllocator {
-  static void *alloc(size_t size) { return malloc(size); }
-  static void dealloc(void *ptr) { free(ptr); }
+  static void *allocate(size_t size) { return malloc(size); }
+  static void deallocate(void *ptr) { free(ptr); }
 };
 
 template <typename Allocator>
 int64_t thrd_task(Allocator &allocator, int64_t repeat) {
   int64_t prevent_opt = 0;
   for (int64_t i = 0; i < repeat; ++i) {
-    void *ptr = allocator.alloc(1 + (i & 0xFFFF));
+    void *ptr = allocator.allocate(1 + (i & 0xFFFF));
     prevent_opt ^= (int64_t)ptr ^ *(char *)ptr;
-    allocator.dealloc(ptr);
+    allocator.deallocate(ptr);
   }
   return prevent_opt;
 }
 
 template <typename Allocator>
 int64_t perf_one(const char *name, int thrd_num, int64_t repeat) {
-  static_assert(std::is_same<void *, decltype(std::declval<Allocator>().alloc(
+  static_assert(std::is_same<void *, decltype(std::declval<Allocator>().allocate(
                                          (size_t)(1)))>::value,
                 "Parameter allocator must have alloc method!");
-  static_assert(std::is_same<void, decltype(std::declval<Allocator>().dealloc(
+  static_assert(std::is_same<void, decltype(std::declval<Allocator>().deallocate(
                                        (void *)(0)))>::value,
                 "Parameter allocator must have dealloc method!");
 

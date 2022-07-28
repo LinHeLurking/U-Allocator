@@ -84,14 +84,14 @@ FrontEnd::FrontEnd() {
 
 void FrontEnd::refill(int slot_id) {
   for (int i = 0; i < CHUNK_NUM; ++i) {
-    CHUNK_LIST[slot_id].push_back(back_end->alloc(SLOT_SIZE_MAP[slot_id]));
+    CHUNK_LIST[slot_id].push_back(back_end->allocate(SLOT_SIZE_MAP[slot_id]));
   }
 }
 
-void *FrontEnd::alloc(size_t size) {
+void *FrontEnd::allocate(size_t size) {
   size_t round_size = round2pow(size);
   if (round_size > MAX_CHACH_CHUNK_SIZE) {
-    return back_end->alloc(round_size);
+    return back_end->allocate(round_size);
   }
   size_t slot_id = ctz(round_size);
   if (CHUNK_LIST[slot_id].empty()) {
@@ -103,10 +103,10 @@ void *FrontEnd::alloc(size_t size) {
   return ptr;
 }
 
-void FrontEnd::dealloc(void *ptr) {
+void FrontEnd::deallocate(void *ptr) {
   auto it = PTR_SIZE_MAP.find(ptr);
   if (it == PTR_SIZE_MAP.end()) {
-    back_end->dealloc(ptr);
+    back_end->deallocate(ptr);
     return;
   }
   size_t slot_id = ctz(it->second);

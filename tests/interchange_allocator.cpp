@@ -23,12 +23,12 @@ int thrd_task_interchange(int tid, int repeat, std::vector<std::mutex> &mutexes,
       }
       void *cur = allocated[tid].back();
       allocated[tid].pop_back();
-      allocator.dealloc(cur);
+      allocator.deallocate(cur);
       mutexes[tid].unlock();
     } else if (coin == 2) {
       int len = dis(gen);
       mutexes[tid].lock();
-      char *cur = (char *)allocator.alloc(len);
+      char *cur = (char *)allocator.allocate(len);
       if (mem_wr(cur, len) != 0) {
         return -1;
       }

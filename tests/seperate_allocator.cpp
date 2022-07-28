@@ -19,10 +19,10 @@ int thrd_task_separate(int repeat) {
     if (coin == 1 && !allocated.empty()) {
       void *cur = allocated.back();
       allocated.pop_back();
-      allocator.dealloc(cur);
+      allocator.deallocate(cur);
     } else if (coin == 2) {
       int len = dis(gen);
-      char *cur = (char *)allocator.alloc(len);
+      char *cur = (char *)allocator.allocate(len);
       if (mem_wr(cur, len) != 0) {
         return -1;
       }
@@ -30,7 +30,7 @@ int thrd_task_separate(int repeat) {
     }
   }
   for (void *ptr : allocated) {
-    allocator.dealloc(ptr);
+    allocator.deallocate(ptr);
   }
   return 0;
 }
