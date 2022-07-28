@@ -15,23 +15,15 @@ struct NaiveAllocator {
   static void dealloc(void *ptr) { free(ptr); }
 };
 
-#if __clang__
-#define _NO_OPT __attribute__((optnone))
-#elif __GNUC__
-#define _NO_OPT __attribute__((optimize("0")))
-#else
-#define _NO_OPT
-#endif
-
 template <typename Allocator>
-void thrd_task(Allocator &allocator, int64_t repeat) _NO_OPT;
-
-template <typename Allocator>
-void thrd_task(Allocator &allocator, int64_t repeat) {
+int64_t thrd_task(Allocator &allocator, int64_t repeat) {
+  int64_t prevent_opt = 0;
   for (int64_t i = 0; i < repeat; ++i) {
     void *ptr = allocator.alloc(1 + (i & 0xFFFF));
+    prevent_opt ^= (int64_t)ptr ^ *(char *)ptr;
     allocator.dealloc(ptr);
   }
+  return prevent_opt;
 }
 
 template <typename Allocator>
