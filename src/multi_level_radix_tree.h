@@ -13,8 +13,8 @@ namespace RadixTree {
 namespace Detail {
 
 struct NaiveAllocator {
-  static void *allocate(size_t size) { return malloc(size); }
-  static void deallocate(void *ptr) { free(ptr); }
+  inline void *allocate(size_t size) { return malloc(size); }
+  inline void deallocate(void *ptr) { free(ptr); }
 };
 
 namespace {
@@ -43,16 +43,16 @@ class L4ChunkyRadixTree {
  protected:
   struct LeafNode {
     V data[1ULL << ChunkBitWidth] = {};
-    size_t cnt = 0;
     std::bitset<(1ULL << ChunkBitWidth)> occ_map{0};
   };
 
   struct TreeNode {
     void *child[1ULL << KeySegBitWidth];
-    size_t cnt = 0;
   };
 
   void *child[1ULL << KeySegBitWidth] = {};
+
+  Allocator *allocator = new Allocator();
 
  public:
   static constexpr size_t SEG_MASK = (1ULL << KeySegBitWidth) - 1;
@@ -108,30 +108,29 @@ class L4ChunkyRadixTree {
     void **ptr = child;
     // First jump
     if (ptr[seg_1] == nullptr) {
-      ptr[seg_1] = Allocator::allocate(sizeof(TreeNode));
+      ptr[seg_1] = allocator->allocate(sizeof(TreeNode));
     }
     ptr = (void **)ptr[seg_1];
     // Second jump
     if (ptr[seg_2] == nullptr) {
-      ptr[seg_2] = Allocator::allocate(sizeof(TreeNode));
+      ptr[seg_2] = allocator->allocate(sizeof(TreeNode));
     }
     ptr = (void **)ptr[seg_2];
     // Third jump
     if (ptr[seg_3] == nullptr) {
-      ptr[seg_3] = Allocator::allocate(sizeof(TreeNode));
+      ptr[seg_3] = allocator->allocate(sizeof(TreeNode));
     }
     ptr = (void **)ptr[seg_3];
     // Fourth jump
     if (ptr[seg_4] == nullptr) {
-      ptr[seg_4] = Allocator::allocate(sizeof(LeafNode));
+      ptr[seg_4] = allocator->allocate(sizeof(LeafNode));
     }
     ptr = (void **)ptr[seg_4];
     // Now ptr points to data leaf, which is a (1ULL << ChunkBitWidth) sized
     // chunk.
     LeafNode *leaf = reinterpret_cast<LeafNode *>(ptr);
-    leaf->cnt += 1;
     leaf->data[seg_5] = value;
-    leaf->occ_map |= 1 << seg_5;
+    leaf->occ_map[seg_5] = 1;
   }
 
   inline void remove(K key) noexcept {
@@ -166,7 +165,6 @@ class L4ChunkyRadixTree {
     // Now ptr points to data leaf, which is a (1ULL << ChunkBitWidth) sized
     // chunk.
     LeafNode *leaf = reinterpret_cast<LeafNode *>(ptr);
-    leaf->cnt -= 1;
     leaf->occ_map &= ~(1 << seg_5);
   }
 };
@@ -174,7 +172,7 @@ class L4ChunkyRadixTree {
 
 // 64-bit addressing
 template <typename K, typename V, typename Allocator = Detail::NaiveAllocator>
-using L4RadixTree = Detail::L4ChunkyRadixTree<K, V, 16, 3, Allocator>;
+using L4RadixTree = Detail::L4ChunkyRadixTree<K, V, 16, 0, Allocator>;
 
 }  // namespace RadixTree
 

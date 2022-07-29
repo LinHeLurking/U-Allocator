@@ -11,8 +11,8 @@
 #include "../src/allocator.h"
 
 struct NaiveAllocator {
-  static void *allocate(size_t size) { return malloc(size); }
-  static void deallocate(void *ptr) { free(ptr); }
+  inline void *allocate(size_t size) { return malloc(size); }
+  inline void deallocate(void *ptr) { free(ptr); }
 };
 
 template <typename Allocator>
@@ -28,12 +28,14 @@ int64_t thrd_task(Allocator &allocator, int64_t repeat) {
 
 template <typename Allocator>
 int64_t perf_one(const char *name, int thrd_num, int64_t repeat) {
-  static_assert(std::is_same<void *, decltype(std::declval<Allocator>().allocate(
-                                         (size_t)(1)))>::value,
-                "Parameter allocator must have alloc method!");
-  static_assert(std::is_same<void, decltype(std::declval<Allocator>().deallocate(
-                                       (void *)(0)))>::value,
-                "Parameter allocator must have dealloc method!");
+  static_assert(
+      std::is_same<void *, decltype(std::declval<Allocator>().allocate(
+                               (size_t)(1)))>::value,
+      "Parameter allocator must have allocate method!");
+  static_assert(
+      std::is_same<void, decltype(std::declval<Allocator>().deallocate(
+                             (void *)(0)))>::value,
+      "Parameter allocator must have deallocate method!");
 
   auto print_perf = [](const char *name, double perf) {
     fprintf(stdout, "%s: %0.6lf ns/op\n", name, perf);
