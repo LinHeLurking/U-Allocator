@@ -133,9 +133,22 @@ class MemPage {
    * It's the caller's duty to guarentee the ptr is allocated from this page.
    */
   inline void deallocate_block(void *ptr) noexcept {
+#ifndef NDEBUG
+    // Check if the ptr is from this page
+    if (ptr < this || ptr >= this + Size) {
+      fprintf(stderr, "Error: deallocate an external pointer to this page!\n");
+    }
+#endif
     ListNode *node = reinterpret_cast<ListNode *>(ptr);
     node->next_ = meta_.plist_free_;
     meta_.plist_free_ = node;
+  }
+
+  inline void print_free_list() noexcept {
+    fprintf(stdout, "ListNode of %p\n", this);
+    for (ListNode *cur = meta_.plist_free_; cur != nullptr; cur = cur->next_) {
+      fprintf(stdout, "%p\n", cur);
+    }
   }
 };
 
@@ -155,6 +168,7 @@ class FixedBlockSizeMemPool {
     size_t block_size_;
     size_t page_num_;
     Page *page_base_;
+    Page *page_end_;
   };
 
   static_assert(sizeof(Meta) <= PageSize,
@@ -164,8 +178,8 @@ class FixedBlockSizeMemPool {
 
   /**
    * @brief Create a [MemPool] instance from given parameters.
-   * @param block_size Byte size of blocks in page in pool. Block size should be at least 
-   * the size of a [ListNode].
+   * @param block_size Byte size of blocks in page in pool. Block size should be
+   * at least the size of a [ListNode].
    * @param page_num Number of pages in this pool.
    * @param pool_base If provided, the create method will not malloc data by
    * iteself but use the [pool_base] address. It's the caller's response to
@@ -217,6 +231,22 @@ class FixedBlockSizeMemPool {
     return malloc(meta_.block_size_);
   }
 
+  /**
+   * @brief Give a pointer back to the pool.
+   * It's the caller's duty to guarantee the ptr is allocated from this pool.
+   */
+  inline void deallocate(void *ptr) noexcept {
+    // If everything is right, it never reaches this branch.
+    // But we add this for more safety. This behavior will be tested in CTEST.
+    if (ptr < meta_.page_base_ || ptr >= meta_.page_end_) {
+      free(ptr);
+      return;
+    }
+    Page *page = reinterpret_cast<Page *>(reinterpret_cast<size_t>(ptr) &
+                                          ~(PageSize - 1));
+    page->deallocate_block(ptr);
+  }
+
   FixedBlockSizeMemPool() = delete;
   ~FixedBlockSizeMemPool() {
     if (meta_.owned) {
@@ -230,6 +260,8 @@ class FixedBlockSizeMemPool {
     meta_.page_num_ = page_num;
     meta_.block_size_ = block_size;
     meta_.page_base_ = reinterpret_cast<Page *>(page_base);
+    meta_.page_end_ =
+        reinterpret_cast<Page *>(page_base + sizeof(Page) * page_num);
     for (size_t i = 0; i < page_num; ++i) {
       meta_.page_base_[i].init(block_size, this);
     }
