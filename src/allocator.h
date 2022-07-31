@@ -9,28 +9,28 @@
 #include <map>
 #include <vector>
 
+#include "mem_pool.h"
+
 namespace UAllocator {
 namespace Detail {
 
-class AllocatorBase {
- public:
-  AllocatorBase() = default;
-  ~AllocatorBase() = default;
-  static void *allocate(size_t size) { return malloc(size); }
-  static void deallocate(void *ptr) { free(ptr); }
-};
+static thread_local MemPool* cache = MemPool::create();
 
-template <typename BackEndAllocator = AllocatorBase>
-class FrontEnd {
- protected:
+class AllocatorFrontEnd {
  public:
-  FrontEnd() {}
+  AllocatorFrontEnd() = default;
+  ~AllocatorFrontEnd() = default;
 
-  void *allocate(size_t size) { return nullptr; }
-  void deallocate(void *ptr) {}
+  inline void* allocate(size_t size) const noexcept {
+    return cache->allocate(size);
+  }
+  inline void deallocate(void* ptr) const noexcept {
+    return cache->deallocate(ptr);
+  }
 };
 }  // namespace Detail
 
-using Allocator = Detail::FrontEnd<>;
+using Allocator = Detail::AllocatorFrontEnd;
+
 }  // namespace UAllocator
 #endif

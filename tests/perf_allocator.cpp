@@ -19,7 +19,8 @@ template <typename Allocator>
 int64_t thrd_task(Allocator &allocator, int64_t repeat) {
   int64_t prevent_opt = 0;
   for (int64_t i = 0; i < repeat; ++i) {
-    void *ptr = allocator.allocate(1 + (i & 0xFFFF));
+    // void *ptr = allocator.allocate(1 + (i & 0x3ff));
+    void *ptr = allocator.allocate(1 + (i & 0xffff));
     prevent_opt ^= (int64_t)ptr ^ *(char *)ptr;
     allocator.deallocate(ptr);
   }
@@ -71,13 +72,11 @@ int perf_all(int thrd_num, int64_t repeat, int epoch = 10) {
   for (int i = 0; i < epoch; ++i) {
     fprintf(stdout, "epoch: %d\n", i);
     naive_cnt += _perf_one(NaiveAllocator);
-    base_cnt += _perf_one(UAllocator::Detail::AllocatorBase);
     ua_cnt += _perf_one(UAllocator::Allocator);
     fprintf(stdout, "\n");
   }
   fprintf(stdout, "Average:\n");
   _summary(NaiveAllocator, naive_cnt);
-  _summary(UAllocator::Detail::AllocatorBase, base_cnt);
   _summary(UAllocator::Allocator, ua_cnt);
   return 0;
 }
