@@ -24,7 +24,7 @@ int test_fixed_size_pool_single_size(size_t block_size, size_t page_num,
         return -1;
       }
       for (size_t b = 0; b < block_size; ++b) {
-        ptr[b] = 'a' + (b % 26);
+        ptr[b] = 'a' + (b + size_t(ptr)) % 26;
       }
       for (auto old : allocated) {
         if (old == ptr) {
@@ -38,16 +38,17 @@ int test_fixed_size_pool_single_size(size_t block_size, size_t page_num,
       char *ptr = (char *)allocated.back();
       allocated.pop_back();
       for (size_t b = 0; b < block_size; ++b) {
-        if (ptr[b] != 'a' + (b % 26)) {
+        if (ptr[b] != 'a' + (b + size_t(ptr)) % 26) {
           fprintf(
               stderr,
               "Block size: %lu, page num: %lu, round %lu, batch %lu, byte %lu, "
               "expected %c but "
               "get %c.\n",
-              block_size, page_num, rd, id, b, char('a' + (b % 26)), ptr[b]);
+              block_size, page_num, rd, id, b,
+              char('a' + (b + size_t(ptr)) % 26), ptr[b]);
           return -1;
         }
-        prevent_opt &= ptr[b] - char('a' + (b % 26));
+        prevent_opt &= ptr[b] - char('a' + (b + size_t(ptr)) % 26);
       }
       pool->deallocate((void *)ptr);
     }
@@ -80,7 +81,7 @@ int test_mem_pool(size_t batch_num = size_t(1e2),
       size_t size = dist(gen);
       char *ptr = (char *)pool->allocate(size);
       for (size_t b = 0; b < size; ++b) {
-        ptr[b] = 'a' + char(b % 26);
+        ptr[b] = 'a' + (b + size_t(ptr)) % 26;
       }
       allocated.push_back({ptr, size});
     }
@@ -89,13 +90,13 @@ int test_mem_pool(size_t batch_num = size_t(1e2),
       char *ptr = allocated.back().first;
       allocated.pop_back();
       for (size_t b = 0; b < size; ++b) {
-        if (ptr[b] != 'a' + char(b % 26)) {
+        if (ptr[b] != 'a' + (b + size_t(ptr)) % 26) {
           fprintf(stderr,
                   "Round %lu, batch %lu, byte %lu, expected %c but get %c\n",
-                  cur_b, id, b, char('a' + char(b % 26)), ptr[b]);
+                  cur_b, id, b, char('a' + (b + size_t(ptr)) % 26), ptr[b]);
           return -1;
         }
-        prevent_opt &= ptr[b] - char('a' + char(b % 26));
+        prevent_opt &= ptr[b] - char('a' + (b + size_t(ptr)) % 26);
       }
     }
   }
