@@ -77,7 +77,7 @@ class MemPage {
   ~MemPage() = delete;
 
   /**
-   * @brief Initialize all needed fiels in this page.
+   * @brief Initialize all needed fields in this page.
    * @param block_size Size of a block in byte. It should be at least
    * sizeof(ListNode).
    * @param pool_base Pointer to the whole pool.
@@ -87,7 +87,7 @@ class MemPage {
     meta_.pool_base_ = pool_base;
     size_t block_num = (PageSize - sizeof(Meta)) / block_size;
 
-    // Apending all blocks to the free list.
+    // Appending all blocks to the free list.
     meta_.plist_free_ = reinterpret_cast<ListNode *>(data_);
     ListNode *cur = meta_.plist_free_;
     for (size_t i = 1; i < block_num; ++i, cur = cur->next_) {
@@ -110,7 +110,7 @@ class MemPage {
 
   /**
    * @brief Put the ptr back to page.
-   * It's the caller's duty to guarentee the ptr is allocated from this page.
+   * It's the caller's duty to guarantee the ptr is allocated from this page.
    */
   inline void deallocate_block(void *ptr) noexcept {
 #ifndef NDEBUG
@@ -126,7 +126,7 @@ class MemPage {
 };
 
 /**
- * @brief A memory pool contains serveral pages with the same page size.
+ * @brief A memory pool contains several pages with the same page size.
  * All blocks in the same pool also have the same block size.
  * Due to alignment issues, do not construct [MemPool] directly.
  * Instead, use the [create] method.
@@ -155,7 +155,7 @@ class FixedBlockSizeMemPool {
    * at least the size of a [ListNode].
    * @param page_num Number of pages in this pool.
    * @param pool_base If provided, the create method will not malloc data by
-   * iteself but use the [pool_base] address. It's the caller's response to
+   * itself but use the [pool_base] address. It's the caller's response to
    * guarantee there's enough space pointed by the pointer. This parameter
    * should be provided with [page_base] at the same time.
    * @param page_base Similar as previous one, but points to the base address of
@@ -256,8 +256,8 @@ class FixedBlockSizeMemPool {
 };
 
 /**
- * @brief A [MemPool] contains serveral different sized [FixedBlockSizeMemPool],
- * which cache a number of small chunck of memory.
+ * @brief A [MemPool] contains several different sized [FixedBlockSizeMemPool],
+ * which cache a number of small chunk of memory.
  * On allocation, MemPool will choose a suitable pool and allocate memory
  * from it. On deallocation, MemPool can recognize whether the pointer
  * comes from the MemPool cache or directly from libc malloc and send the
@@ -352,7 +352,7 @@ class MemPool {
   }
 };
 
-// In C++11, we have to redeclare them in namespace scpoe again.
+// In C++11, we have to redeclare them in namespace scope again.
 template <size_t PageSize>
 constexpr size_t MemPool<PageSize>::SizeNum;
 template <size_t PageSize>
