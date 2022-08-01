@@ -11,9 +11,9 @@ using namespace UAllocator::Detail;
 int test_fixed_size_pool_single_size(size_t block_size, size_t page_num,
                                      size_t batch_num = size_t(5e2),
                                      size_t batch_size = size_t(1e3)) {
-  using Page = FixedBlockSizeMemPool<4096>::Page;
-  FixedBlockSizeMemPool<4096> *pool =
-      FixedBlockSizeMemPool<4096>::create(block_size, page_num);
+  using Page = FixedBlockSizeMemPool<4096, 64>::Page;
+  FixedBlockSizeMemPool<4096, 64> *pool =
+      FixedBlockSizeMemPool<4096, 64>::create(block_size, page_num);
   int prevent_opt = ~0;
   for (size_t rd = 0; rd < batch_num; ++rd) {
     std::vector<void *> allocated;

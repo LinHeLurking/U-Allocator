@@ -43,7 +43,7 @@ Int32 ctz(Int32 x) {
   return __builtin_ctz(x);
 }
 
-template <size_t PageSize>
+template <size_t PageSize, size_t BlockAlign>
 class FixedBlockSizeMemPool;
 
 /**
@@ -52,7 +52,7 @@ class FixedBlockSizeMemPool;
  * be [Size] aligned. A [MemPage] should not constructed directly
  * because we might want to make many continuous pages.
  */
-template <size_t PageSize>
+template <size_t PageSize, size_t BlockAlign>
 class MemPage {
  public:
   struct ListNode {
@@ -64,14 +64,19 @@ class MemPage {
    * stored in metadata to decrease memory footprint.
    */
   struct Meta {
-    FixedBlockSizeMemPool<PageSize> *pool_base_;
+    FixedBlockSizeMemPool<PageSize, BlockAlign> *pool_base_;
     ListNode *plist_free_;
   };
 
+  static constexpr size_t PaddingLen =
+      (sizeof(Meta) + BlockAlign - 1) / BlockAlign * BlockAlign - sizeof(Meta);
+
   Meta meta_;
 
+  char padding_[PaddingLen];
+
   // Data array holds the real block data.
-  char data_[PageSize - sizeof(Meta)];
+  char data_[PageSize - sizeof(Meta) - sizeof(padding_)];
 
   MemPage() = delete;
   ~MemPage() = delete;
@@ -82,10 +87,13 @@ class MemPage {
    * sizeof(ListNode).
    * @param pool_base Pointer to the whole pool.
    */
-  inline void init(size_t block_size,
-                   FixedBlockSizeMemPool<PageSize> *pool_base) noexcept {
+  inline void reset(
+      size_t block_size,
+      FixedBlockSizeMemPool<PageSize, BlockAlign> *pool_base) noexcept {
+    block_size = (block_size + BlockAlign - 1) / BlockAlign * BlockAlign;
     meta_.pool_base_ = pool_base;
-    size_t block_num = (PageSize - sizeof(Meta)) / block_size;
+    size_t block_num =
+        (PageSize - sizeof(Meta) - sizeof(padding_)) / block_size;
 
     // Appending all blocks to the free list.
     meta_.plist_free_ = reinterpret_cast<ListNode *>(data_);
@@ -131,10 +139,10 @@ class MemPage {
  * Due to alignment issues, do not construct [MemPool] directly.
  * Instead, use the [create] method.
  */
-template <size_t PageSize>
+template <size_t PageSize, size_t BlockAlign>
 class FixedBlockSizeMemPool {
  public:
-  using Page = MemPage<PageSize>;
+  using Page = MemPage<PageSize, BlockAlign>;
 
   struct Meta {
     bool owned;
@@ -161,9 +169,10 @@ class FixedBlockSizeMemPool {
    * @param page_base Similar as previous one, but points to the base address of
    * first page in pool.
    */
-  static inline FixedBlockSizeMemPool<PageSize> *create(
+  static inline FixedBlockSizeMemPool<PageSize, BlockAlign> *create(
       size_t block_size, size_t page_num, void *pool_base = nullptr,
       void *page_base = nullptr) noexcept {
+    block_size = (block_size + BlockAlign - 1) / BlockAlign * BlockAlign;
     if (pool_base == nullptr && page_base == nullptr) {
       // Aligned new is C++17 feature. Now we have to manually translate
       // addresses.
@@ -181,15 +190,17 @@ class FixedBlockSizeMemPool {
           page_base_ptr_val += PageSize;
         }
       }
-      FixedBlockSizeMemPool<PageSize> *self =
-          reinterpret_cast<FixedBlockSizeMemPool<PageSize> *>(self_ptr_val);
-      self->init(block_size, page_base_ptr_val, page_num);
+      FixedBlockSizeMemPool<PageSize, BlockAlign> *self =
+          reinterpret_cast<FixedBlockSizeMemPool<PageSize, BlockAlign> *>(
+              self_ptr_val);
+      self->reset(block_size, page_base_ptr_val, page_num);
       self->meta_.owned = true;
       return self;
     } else {
-      FixedBlockSizeMemPool<PageSize> *self =
-          reinterpret_cast<FixedBlockSizeMemPool<PageSize> *>(pool_base);
-      self->init(block_size, reinterpret_cast<size_t>(page_base), page_num);
+      FixedBlockSizeMemPool<PageSize, BlockAlign> *self =
+          reinterpret_cast<FixedBlockSizeMemPool<PageSize, BlockAlign> *>(
+              pool_base);
+      self->reset(block_size, reinterpret_cast<size_t>(page_base), page_num);
       self->meta_.owned = false;
       return self;
     }
@@ -242,15 +253,16 @@ class FixedBlockSizeMemPool {
   }
 
  protected:
-  inline void init(size_t block_size, size_t page_base,
-                   size_t page_num) noexcept {
+  inline void reset(size_t block_size, size_t page_base,
+                    size_t page_num) noexcept {
+    block_size = (block_size + BlockAlign - 1) / BlockAlign * BlockAlign;
     meta_.page_num_ = page_num;
     meta_.block_size_ = block_size;
     meta_.page_base_ = reinterpret_cast<Page *>(page_base);
     meta_.page_end_ =
         reinterpret_cast<Page *>(page_base + sizeof(Page) * page_num);
     for (size_t i = 0; i < page_num; ++i) {
-      meta_.page_base_[i].init(block_size, this);
+      meta_.page_base_[i].reset(block_size, this);
     }
   }
 };
@@ -263,7 +275,7 @@ class FixedBlockSizeMemPool {
  * comes from the MemPool cache or directly from libc malloc and send the
  * data back to MemPool cache or system memory correctly.
  */
-template <size_t PageSize = 4096>
+template <size_t PageSize = 4096, size_t BlockAlign = 16>
 class MemPool {
  public:
   // Number of different block sizes;
@@ -271,17 +283,17 @@ class MemPool {
   // An array containing the block_size:num_of_page pairs.
   // TODO: Add static check to guarantee SizeDist is valid.
   static constexpr std::pair<size_t, size_t> SizeDist[SizeNum] = {
-      {8, 16},  {16, 16}, {32, 16}, {64, 8},
-      {128, 8}, {256, 4}, {512, 4}, {1024, 4}};
+      {8, 4},    {16, 4},  {32, 16}, {64, 16},
+      {128, 16}, {256, 8}, {512, 4}, {1024, 4}};
   // Size threshold about whether the MemPool caches it.
   static constexpr size_t Threshold = SizeDist[SizeNum - 1].first;
 
-  using Page = MemPage<PageSize>;
+  using Page = MemPage<PageSize, BlockAlign>;
 
   struct Meta {
     void *pool_begin_;
     void *pool_end_;
-    FixedBlockSizeMemPool<PageSize> *pool[SizeNum];
+    FixedBlockSizeMemPool<PageSize, BlockAlign> *pool[SizeNum];
   };
 
   static_assert(sizeof(Meta) <= PageSize, "Metadata must fit in a page.");
@@ -312,8 +324,13 @@ class MemPool {
       }
     }
     MemPool *self = reinterpret_cast<MemPool *>(meta_ptr_val);
-    self->meta_.pool_begin_ = reinterpret_cast<void *>(pool_ptr_val);
-    self->meta_.pool_end_ =
+    self->reset(pool_ptr_val, need_page_num);
+    return self;
+  }
+
+  void reset(size_t pool_ptr_val, size_t need_page_num) noexcept {
+    this->meta_.pool_begin_ = reinterpret_cast<void *>(pool_ptr_val);
+    this->meta_.pool_end_ =
         reinterpret_cast<void *>(pool_ptr_val + need_page_num * PageSize);
     for (size_t cur = pool_ptr_val, i = 0; i < SizeNum;
          cur += (SizeDist[i].second + 1) * PageSize, i += 1) {
@@ -321,10 +338,9 @@ class MemPool {
       size_t page_num = SizeDist[i].second;
       void *pool_base = reinterpret_cast<void *>(cur);
       void *page_base = reinterpret_cast<void *>(cur + PageSize);
-      self->meta_.pool[i] = FixedBlockSizeMemPool<PageSize>::create(
+      this->meta_.pool[i] = FixedBlockSizeMemPool<PageSize, BlockAlign>::create(
           block_size, page_num, pool_base, page_base);
     }
-    return self;
   }
 
   inline size_t get_pool_id(size_t round_size) const noexcept {
@@ -353,13 +369,13 @@ class MemPool {
 };
 
 // In C++11, we have to redeclare them in namespace scope again.
-template <size_t PageSize>
-constexpr size_t MemPool<PageSize>::SizeNum;
-template <size_t PageSize>
-constexpr std::pair<size_t, size_t>
-    MemPool<PageSize>::SizeDist[MemPool<PageSize>::SizeNum];
-template <size_t PageSize>
-constexpr size_t MemPool<PageSize>::Threshold;
+template <size_t PageSize, size_t BlockAlign>
+constexpr size_t MemPool<PageSize, BlockAlign>::SizeNum;
+template <size_t PageSize, size_t BlockAlign>
+constexpr std::pair<size_t, size_t> MemPool<
+    PageSize, BlockAlign>::SizeDist[MemPool<PageSize, BlockAlign>::SizeNum];
+template <size_t PageSize, size_t BlockAlign>
+constexpr size_t MemPool<PageSize, BlockAlign>::Threshold;
 
 }  // namespace Detail
 }  // namespace UAllocator
