@@ -43,6 +43,30 @@ Int32 ctz(Int32 x) {
   return __builtin_ctz(x);
 }
 
+// This helper function is modified from NCNN project
+// https://github.com/Tencent/ncnn/blob/00c08d7bda53b10dd488af3aa65de9c6dbe30cfb/src/allocator.h#L71-L90
+template<size_t BlockAlign>
+static void* aligned_malloc(size_t size)
+{
+#if _MSC_VER
+    return _aligned_malloc(size, BlockAlign);
+#elif (defined(__unix__) || defined(__APPLE__)) && _POSIX_C_SOURCE >= 200112L || (__ANDROID__ && __ANDROID_API__ >= 17)
+    void* ptr = 0;
+    if (posix_memalign(&ptr, BlockAlign, size + 64))
+        ptr = 0;
+    return ptr;
+#elif __ANDROID__ && __ANDROID_API__ < 17
+    return memalign(BlockAlign, size + 64);
+#else
+    unsigned char* udata = (unsigned char*)malloc(size + sizeof(void*) + BlockAlign + 64);
+    if (!udata)
+        return 0;
+    unsigned char** adata = alignPtr((unsigned char**)udata + 1, BlockAlign);
+    adata[-1] = udata;
+    return adata;
+#endif
+}
+
 template <size_t PageSize, size_t BlockAlign>
 class FixedBlockSizeMemPool;
 
@@ -214,7 +238,8 @@ class FixedBlockSizeMemPool {
       }
     }
     // If all pages are full, malloc if by libc.
-    return malloc(meta_.block_size_);
+    // return malloc(meta_.block_size_);
+    return aligned_malloc<BlockAlign>(meta_.block_size_);
   }
 
   /**
@@ -350,7 +375,7 @@ class MemPool {
 
   void *allocate(size_t size) noexcept {
     if (size > Threshold) {
-      return malloc(size);
+      return aligned_malloc<BlockAlign>(size);
     }
     size_t round_size = std::max(round2pow(size), SizeDist[0].first);
     size_t id = get_pool_id(round_size);

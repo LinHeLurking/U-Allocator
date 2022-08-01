@@ -23,6 +23,10 @@ int test_fixed_size_pool_single_size(size_t block_size, size_t page_num,
         fprintf(stderr, "Allocation failed.\n");
         return -1;
       }
+      if (((size_t)ptr & (64 - 1)) != 0) {
+        fprintf(stderr, "Pointer has wrong alignment!\n");
+        return -1;
+      }
       for (size_t b = 0; b < block_size; ++b) {
         ptr[b] = 'a' + (b + size_t(ptr)) % 26;
       }
