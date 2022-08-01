@@ -9,11 +9,11 @@
 using namespace UAllocator::Detail;
 
 int test_fixed_size_pool_single_size(size_t block_size, size_t page_num,
-                                     size_t batch_num = size_t(1e2),
+                                     size_t batch_num = size_t(5e2),
                                      size_t batch_size = size_t(1e3)) {
-  using Page = FixedBlockSizeMemPool::Page;
-  FixedBlockSizeMemPool *pool =
-      FixedBlockSizeMemPool::create(block_size, page_num);
+  using Page = FixedBlockSizeMemPool<4096>::Page;
+  FixedBlockSizeMemPool<4096> *pool =
+      FixedBlockSizeMemPool<4096>::create(block_size, page_num);
   int prevent_opt = ~0;
   for (size_t rd = 0; rd < batch_num; ++rd) {
     std::vector<void *> allocated;
@@ -68,12 +68,12 @@ int test_fixed_size_pool() {
   return result;
 }
 
-int test_mem_pool(size_t batch_num = size_t(1e2),
+int test_mem_pool(size_t batch_num = size_t(5e2),
                   size_t batch_size = size_t(1e3)) {
   std::random_device rd{};
   std::mt19937 gen{rd()};
   std::uniform_int_distribution<> dist(1, 3000);
-  auto pool = MemPool::create();
+  auto pool = MemPool<>::create();
   int prevent_opt = ~0;
   for (size_t cur_b = 0; cur_b < batch_num; ++cur_b) {
     std::vector<std::pair<char *, size_t>> allocated;

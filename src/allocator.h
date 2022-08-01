@@ -14,7 +14,7 @@
 namespace UAllocator {
 namespace Detail {
 
-static thread_local MemPool* cache = MemPool::create();
+static thread_local MemPool<>* cache = MemPool<>::create();
 
 class AllocatorFrontEnd {
  public:
